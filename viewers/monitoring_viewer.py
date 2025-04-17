@@ -11,6 +11,7 @@ class MonitoringViewer(VideoStreamViewer):
     def __init__(self, config_file):
         super().__init__()
         config = yaml.safe_load(open(config_file))
+        self._secret_file = config["secrets_file"]
         self._settings = config["monitoring"]
         self._is_enabled = bool(self._settings["enabled"])
 
@@ -65,6 +66,13 @@ class MonitoringViewer(VideoStreamViewer):
             os.remove(filename)
         print(f"[Recorder] Saving clip to {filename}")
 
+        with open(self._secret_file, 'r') as file:
+            secrets = yaml.safe_load(file)
+            device_id = secrets["device_id"]
+            if "device_id" not in secrets:
+                print("[Recorder] Device ID not found in secrets file.")
+                return
+
         try:
             height, width, _ = self._frames[0].shape
             out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), self._fps, (width, height))
@@ -72,8 +80,12 @@ class MonitoringViewer(VideoStreamViewer):
                 out.write(frame)
             out.release()
 
-            response = requests.post(self._notification_url, files={"video": open(filename, 'rb')})
-            print(f"[Recorder] Uploaded clip: {response.status_code}")
+            with open(filename, 'rb') as f:
+                files = {
+                    'video': (filename, f, 'video/mp4')
+                }
+                response = requests.post(f"{self._notification_url}/{device_id}/", files=files)
+                print(f"[Recorder] Uploaded clip: {response.status_code}, {response.text}")
         except Exception as e:
             print(f"[Recorder] Upload failed: {e}")
         finally:

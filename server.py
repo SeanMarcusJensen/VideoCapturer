@@ -1,10 +1,12 @@
 import asyncio
+from pydantic import BaseModel
 import yaml
 from fastapi import FastAPI, Response, WebSocket
 from fastapi.responses import StreamingResponse
 from streaming.viewer import VideoStreamViewer
 import cv2
 import threading
+import os
 
 class FastAPIStreamViewer(VideoStreamViewer):
     def __init__(self):
@@ -55,10 +57,28 @@ class FastAPIStreamViewer(VideoStreamViewer):
 # --- FastAPI app ---
 app = FastAPI()
 fastapi_viewer = FastAPIStreamViewer()
+config = yaml.safe_load(open("config.yml"))
+
+class RegisterDeviceModel(BaseModel):
+    device_id: int
+    device_name: str
+
 
 @app.get("/health")
 def read_root():
     return Response(content="OK", media_type="text/plain", status_code=200)
+
+@app.post("/register")
+async def register_device(model: RegisterDeviceModel):
+    if os.path.exists(config["secrets_file"]):
+        return Response(content="Secret file already exists", status_code=400)
+    
+    text = "device_id: " + str(model.device_id)
+    with open(config["secrets_file"], 'w') as file:
+        file.write(text)
+    print(f"Device ID {model.device_id} registered successfully.")
+    
+    return Response(content="Device ID registered successfully", status_code=201)
 
 @app.get("/stream")
 async def video_feed():

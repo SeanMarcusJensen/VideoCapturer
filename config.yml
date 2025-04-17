@@ -1,13 +1,13 @@
 port: 5000
 host: "0.0.0.0"
-secrets_file: "secrets.yml"
+secrets_file: "/tmp/secrets.txt"
 config:
   name: "MyApp"
   version: "1.0.0"
   description: "This is a sample configuration file."
 monitoring:
   enabled: true
-  notification_url: "http://192.168.32.10:8080/videos/"
+  notification_url: "http://192.168.32.10:8080/videos/device"
   max_video_length_seconds: 60
   buffered_video_in_seconds: 15
   output_dir: "/tmp"
