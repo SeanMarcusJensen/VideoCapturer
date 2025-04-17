@@ -90,6 +90,7 @@ async def websocket_endpoint(ws: WebSocket):
 
             # throttle to your desired FPS
             await asyncio.sleep(1.0 / 30) # 30 FPS
+
     except asyncio.CancelledError:
         # client disconnected
         print("[WebSocket] Client disconnected, stream stopped.")
