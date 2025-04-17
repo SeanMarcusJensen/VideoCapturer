@@ -1,0 +1,24 @@
+port: 5000
+host: "0.0.0.0"
+secrets_file: "secrets.yml"
+config:
+  name: "MyApp"
+  version: "1.0.0"
+  description: "This is a sample configuration file."
+capture:
+  device: 0
+  width: 640
+  height: 480
+  fps: 30
+  fourcc: "mp4v"
+  output: "output.mp4"
+  codec: "XVID"
+  format: "mp4"
+  save_frames: true
+  save_video: true
+  save_audio: false
+recorder:
+  max_duration_in_seconds: 60
+  buffered_video_in_seconds: 5
+  tmp_dir: "/tmp"
+
