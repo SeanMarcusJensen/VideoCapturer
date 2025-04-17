@@ -10,30 +10,13 @@ class FastAPIStreamViewer(VideoStreamViewer):
     def __init__(self):
         super().__init__()
         self._current_viewer_count = 0
-        self._should_stream = False
         self._latest_frame = None
         self._new_frame = False
         self._lock = threading.Lock()
     
-    def start_stream(self):
-        """ Start the stream.
-        """
-        self._current_viewer_count += 1
-        self._should_stream = self._current_viewer_count > 0
-    
-    def stop_stream(self):
-        """ Stop the stream.
-        """
-        self._should_stream = self._current_viewer_count > 0
-        self._latest_frame = None
-        self._current_viewer_count -= 1
-        if self._current_viewer_count < 0:
-            self._current_viewer_count = 0
-    
     def update(self, frame):
         with self._lock:
             self._latest_frame = frame
-            self._new_frame = True
 
     def get_mjpeg_stream(self):
         MAX_VIEWERS = 5
@@ -41,30 +24,34 @@ class FastAPIStreamViewer(VideoStreamViewer):
             raise RuntimeError("Too many connections")
 
         def generate():
+            self._current_viewer_count += 1
             try:
-                self.start_stream()
-                while self._should_stream:
-                    if not self._new_frame:
-                        time.sleep(0.1)
-                        continue
-
+                while True:
                     with self._lock:
-                        if self._latest_frame is not None:
-                            ret, jpeg = cv2.imencode('.jpg', self._latest_frame)
-                            if ret:
-                                yield (b'--frame\r\n'
-                                    b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
-                        else:
-                            yield (b'--frame\r\n'
-                                b'Content-Type: image/jpeg\r\n\r\n' + b'\r\n')
-                    self._new_frame = False
+                        frame = self._latest_frame
+
+                    if frame is None:
+                        yield (b'--frame\r\n'
+                            b'Content-Type: image/jpeg\r\n\r\n' + b'\r\n')
+
+                    ret, jpeg = cv2.imencode('.jpg', self._latest_frame)
+                    if ret:
+                        yield (b'--frame\r\n'
+                            b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
+
+            except GeneratorExit:
+                print("[MJPEG Stream] Client disconnected, stream stopped.")
+                self._current_viewer_count -= 1
+                return
             except Exception as e:
                 print(f"Error in stream: {e}")
             finally:
                 print("[MJPEG Stream] Client disconnected, stream stopped.")
-                self.stop_stream()
+                self._current_viewer_count -= 1
 
         return generate
+
+
 
 # --- FastAPI app ---
 app = FastAPI()
