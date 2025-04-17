@@ -1,10 +1,10 @@
+import asyncio
 import yaml
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, WebSocket
 from fastapi.responses import StreamingResponse
 from streaming.viewer import VideoStreamViewer
 import cv2
 import threading
-import time
 
 class FastAPIStreamViewer(VideoStreamViewer):
     def __init__(self):
@@ -52,15 +52,13 @@ class FastAPIStreamViewer(VideoStreamViewer):
         return generate
 
 
-
 # --- FastAPI app ---
 app = FastAPI()
 fastapi_viewer = FastAPIStreamViewer()
-viewers = 0
 
-@app.get("/")
+@app.get("/health")
 def read_root():
-    return {"Hello": "World"}
+    return Response(content="OK", media_type="text/plain", status_code=200)
 
 @app.get("/stream")
 async def video_feed():
@@ -71,17 +69,46 @@ async def video_feed():
         print(f"Runtime error: {e}")
         return Response(status_code=500)
 
-@app.post("/stream/stop")
-async def stop_stream():
-    global fastapi_viewer
-    fastapi_viewer.stop_stream()
-    return Response(status_code=200)
+@app.websocket("/stream/ws")
+async def websocket_endpoint(ws: WebSocket):
+    try:
+        await ws.accept()
+        while True:
+            # grab the latest frame from your viewer
+            frame = fastapi_viewer._latest_frame  # expose .latest_frame via a property
+            if frame is None:
+                await asyncio.sleep(0.01)
+                continue
 
-@app.post("/stream/start")
-async def stop_stream():
-    global fastapi_viewer
-    fastapi_viewer.start_stream()
-    return Response(status_code=200)
+            # JPEG‐encode
+            ret, jpeg = cv2.imencode('.jpg', frame)
+            if not ret:
+                continue
+
+            # send raw bytes
+            await ws.send_bytes(jpeg.tobytes())
+
+            # throttle to your desired FPS
+            await asyncio.sleep(1.0 / 30) # 30 FPS
+    except asyncio.CancelledError:
+        # client disconnected
+        print("[WebSocket] Client disconnected, stream stopped.")
+        await ws.close()
+    except RuntimeError as e:
+        print(f"[WebSocket] Runtime error: {e}")
+        await ws.close()
+    except KeyboardInterrupt:
+        # server shutdown
+        print("[WebSocket] Server shutting down.")
+        await ws.close()
+    except ConnectionResetError:
+        # client disconnected
+        print("[WebSocket] Connection reset by peer.")
+        await ws.close()
+    except Exception as e:
+        # client disconnected
+        print(f"[WebSocket] Exception: {e}")
+        await ws.close()
 
 if __name__ == "__main__":
     import uvicorn
