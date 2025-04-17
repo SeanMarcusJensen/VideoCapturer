@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     with VideoStream("config.yml") as stream:
         display = DisplayViewer()
-        recorder = MonitoringViewer(fps=30)
+        recorder = MonitoringViewer("config.yml")
         stream.register_viewer(display)
         stream.register_viewer(fastapi_viewer)
         stream.register_viewer(recorder)

@@ -1,28 +1,34 @@
-import yaml
+import os 
 import cv2
+import yaml
 import requests
+import threading
 from collections import deque
 from typing import List
-import threading
 from streaming.viewer import VideoStreamViewer
 
 class MonitoringViewer(VideoStreamViewer):
-    # TODO: Add a config file for the recorder
-    def __init__(self, fps=30, buffer_seconds=20, post_trigger_seconds=40):
+    def __init__(self, config_file):
         super().__init__()
-        self._buffer = deque(maxlen=fps * buffer_seconds)
-        self._fps = fps
-        self._max_video_length_sec = post_trigger_seconds + buffer_seconds
+        config = yaml.safe_load(open(config_file))
+        self._settings = config["monitoring"]
+        self._is_enabled = bool(self._settings["enabled"])
+
+        self._fps = int(self._settings["fps"])
+        self._buffer = deque(maxlen=self._fps * int(self._settings["buffered_video_in_seconds"]))
+        self._max_video_length_sec = int(self._settings["max_video_length_seconds"])
         self._recording = False
         self._lock = threading.Lock()
         self._frames = []
+
+        self._notification_url = self._settings["notification_url"]
 
     def monitor(self):
         """ Monitor the stream and trigger recording when needed.
 
         TODO: READ GPIO PINs.
         """
-        while True:
+        while self._is_enabled:
             key = input()
             if key == "t":
                 print("[Recorder] Trigger event detected!")
@@ -52,7 +58,13 @@ class MonitoringViewer(VideoStreamViewer):
                 self._frames = list(self._buffer)
 
     def _save_and_send_clip(self):
-        filename = "triggered_clip.mp4"
+        filename = os.path.join(self._settings["output_dir"], f"monitoring_clip.mp4")
+        if not os.path.exists(self._settings["output_dir"]):
+            os.makedirs(self._settings["output_dir"])
+        if os.path.exists(filename):
+            os.remove(filename)
+        print(f"[Recorder] Saving clip to {filename}")
+
         try:
             height, width, _ = self._frames[0].shape
             out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), self._fps, (width, height))
@@ -60,12 +72,11 @@ class MonitoringViewer(VideoStreamViewer):
                 out.write(frame)
             out.release()
 
-            response = requests.post("http://192.168.32.10:8080/videos/", files={"video": open(filename, 'rb')})
+            response = requests.post(self._notification_url, files={"video": open(filename, 'rb')})
             print(f"[Recorder] Uploaded clip: {response.status_code}")
         except Exception as e:
             print(f"[Recorder] Upload failed: {e}")
         finally:
-            import os 
             if os.path.exists(filename):
                 os.remove(filename)
 
