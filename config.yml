@@ -1,6 +1,6 @@
 port: 5000
 host: "0.0.0.0"
-secrets_file: "/tmp/secrets.txt"
+secrets_file: "/tmp/secrets.yml"
 config:
   name: "MyApp"
   version: "1.0.0"
