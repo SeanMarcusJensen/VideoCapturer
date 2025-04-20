@@ -1,11 +1,9 @@
 if __name__ == "__main__":
-    import time
     import yaml
     import threading
     from streaming import VideoStream
     from viewers import DisplayViewer, MonitoringViewer
 
-    # Start FastAPI in a background thread
     import uvicorn
     from server import app, fastapi_viewer
 
@@ -21,22 +19,11 @@ if __name__ == "__main__":
         stream.register_viewer(recorder)
         monitoring_thread = threading.Thread(target=recorder.monitor, daemon=True)
 
-        # import RPi.GPIO as GPIO
-        # GPIO.setmode(GPIO.BCM)
-        # GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-        # def gpio_callback(channel):
-        #     print("[GPIO] Trigger event detected!")
-        #     recorder.trigger()
-
-        # GPIO.add_event_detect(17, GPIO.FALLING, callback=gpio_callback, bouncetime=300)
-
         try:
             monitoring_thread.start()
             api_thread.start()
             stream.start_stream()
         except KeyboardInterrupt:
-            # GPIO.cleanup()
             print('error')
         finally:
             print("Stopping stream...")

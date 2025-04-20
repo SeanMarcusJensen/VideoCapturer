@@ -38,8 +38,6 @@ class MonitoringViewer(VideoStreamViewer):
 
     def monitor(self):
         """ Monitor the stream and trigger recording when needed.
-
-        TODO: READ GPIO PINs.
         """
         while self._is_enabled:
             key = input()
@@ -76,7 +74,7 @@ class MonitoringViewer(VideoStreamViewer):
         import time 
         while not stop_event.is_set():
             self._monitoring_led.toggle()
-            time.sleep(0.3)  # Blink speed
+            time.sleep(0.3)
         self._monitoring_led.off()
 
     def _save_and_send_clip(self):

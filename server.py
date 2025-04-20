@@ -94,40 +94,32 @@ async def websocket_endpoint(ws: WebSocket):
     try:
         await ws.accept()
         while True:
-            # grab the latest frame from your viewer
-            frame = fastapi_viewer._latest_frame  # expose .latest_frame via a property
+            frame = fastapi_viewer._latest_frame
             if frame is None:
                 await asyncio.sleep(0.01)
                 continue
 
-            # JPEG‐encode
             ret, jpeg = cv2.imencode('.jpg', frame)
             if not ret:
                 continue
 
-            # send raw bytes
             await ws.send_bytes(jpeg.tobytes())
 
-            # throttle to your desired FPS
             await asyncio.sleep(1.0 / 30) # 30 FPS
 
     except asyncio.CancelledError:
-        # client disconnected
         print("[WebSocket] Client disconnected, stream stopped.")
         await ws.close()
     except RuntimeError as e:
         print(f"[WebSocket] Runtime error: {e}")
         await ws.close()
     except KeyboardInterrupt:
-        # server shutdown
         print("[WebSocket] Server shutting down.")
         await ws.close()
     except ConnectionResetError:
-        # client disconnected
         print("[WebSocket] Connection reset by peer.")
         await ws.close()
     except Exception as e:
-        # client disconnected
         print(f"[WebSocket] Exception: {e}")
         await ws.close()
 
