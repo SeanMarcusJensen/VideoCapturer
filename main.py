@@ -14,7 +14,7 @@ if __name__ == "__main__":
     api_thread = threading.Thread(target=lambda: uvicorn.run(app, host=config['host'], port=int(config['port'])), daemon=True)
 
     with VideoStream("config.yml") as stream:
-        display = DisplayViewer()
+        display = DisplayViewer("config.yml")
         recorder = MonitoringViewer("config.yml")
         stream.register_viewer(display)
         stream.register_viewer(fastapi_viewer)

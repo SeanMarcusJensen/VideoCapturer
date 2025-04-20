@@ -1,7 +1,7 @@
 port: 5000
 host: "0.0.0.0"
 secrets_file: "/home/jensen/secrets.yml"
-local_display_enabled: true
+local_display_enabled: false
 config:
   name: "MyApp"
   version: "1.0.0"
