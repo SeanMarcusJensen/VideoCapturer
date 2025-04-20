@@ -1,6 +1,7 @@
 port: 5000
 host: "0.0.0.0"
-secrets_file: "/tmp/secrets.yml"
+secrets_file: "/home/jensen/secrets.yml"
+local_display_enabled: true
 config:
   name: "MyApp"
   version: "1.0.0"
@@ -12,6 +13,8 @@ monitoring:
   buffered_video_in_seconds: 10
   output_dir: "/tmp"
   fps: 30
+  monitoring_led: 27
+  monitoring_button: 17
 capture:
   device: 0
   width: 640
